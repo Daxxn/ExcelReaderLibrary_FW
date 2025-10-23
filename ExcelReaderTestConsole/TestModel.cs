@@ -26,8 +26,8 @@ namespace ExcelReaderTestConsole
       public double Float { get; set; }
       [ExcelField("Index")]
       public int Value { get; set; }
-      [ExcelField("Enum", "ModernFile")]
-      [ExcelField("Type", "OldFile")]
+      [ExcelField("Enum")]
+      [ExcelField("Type")]
       public TestEnum Enum { get; set; }
 
       public override string ToString() => $"{Value} - {Name} - {Enum} - {Float} -- {Description}";

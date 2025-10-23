@@ -18,12 +18,20 @@ namespace ExcelReaderLibraryFW
   public class ExcelReader
   {
     #region Local Props
-    public ExcelReaderOptions Options { get; set; } = new ExcelReaderOptions();
+    private const int MaxTimeout = 100;
+    /// <summary>
+    /// Options used when reading spreadsheets.
+    /// </summary>
+    public ExcelReaderOptions Options { get; private set; } = new ExcelReaderOptions();
 
     private Dictionary<int, PropertyInfo> PropertyHeaders { get; set; } = new Dictionary<int, PropertyInfo>();
     #endregion
 
     #region Constructors
+    /// <summary>
+    /// Creates a new instance of <see cref="ExcelReader"/> with the required options.
+    /// </summary>
+    /// <param name="options">The options used when reading the spreadsheet.</param>
     public ExcelReader(ExcelReaderOptions options)
     {
       Options = options;
@@ -31,6 +39,69 @@ namespace ExcelReaderLibraryFW
     #endregion
 
     #region Methods
+    /// <summary>
+    /// Read Excel spreadsheet and keep track of errors.
+    /// </summary>
+    /// <typeparam name="T">The model of the data.</typeparam>
+    /// <param name="filePath">The path to the file.</param>
+    /// <returns>A tuple containing the read data and any errors.</returns>
+    /// <exception cref="Exception"></exception>
+    public (IEnumerable<T>, List<Exception>) ReadVerbose<T>(string filePath) where T : class, new()
+    {
+      if (File.Exists(filePath))
+      {
+        var ext = Path.GetExtension(filePath).ToLower();
+        if (ext == ".xlsx" || ext == ".xls")
+        {
+          if (Options.HeaderRowStartIndex >= Options.DataStartIndex)
+          {
+            throw new Exception("The header index cannot be greater than or equal to the data index");
+          }
+          using (var package = new ExcelPackage(filePath))
+          {
+            var sheet = package.Workbook.Worksheets[Options.WorkbookIndex];
+
+            try
+            {
+              ParseHeader<T>(sheet);
+            }
+            catch (Exception)
+            {
+              throw;
+            }
+
+            List<T> data = new List<T>();
+            List<Exception> errors = new List<Exception>();
+            var rowEnd = sheet.Rows.EndRow;
+            for (int r = Options.DataStartIndex; r < rowEnd; r++)
+            {
+              try
+              {
+                if (sheet.Cells[r, Options.StopCheckColumn].Value is null)
+                {
+                  break;
+                }
+                data.Add(ParseDataRow<T>(sheet, r));
+              }
+              catch (Exception e)
+              {
+                errors.Add(e);
+              }
+            }
+            return (data, errors);
+          }
+        }
+        else
+        {
+          throw new Exception("File isnt a valid type. Needs to be either \".xls\" or \".xlsx\"");
+        }
+      }
+      else
+      {
+        throw new Exception("File cannot be found.");
+      }
+    }
+
     /// <summary>
     /// Read Excel spreadsheet
     /// </summary>
@@ -42,10 +113,10 @@ namespace ExcelReaderLibraryFW
     {
       if (File.Exists(filePath))
       {
-        var ext = Path.GetExtension(filePath);
+        var ext = Path.GetExtension(filePath).ToLower();
         if (ext == ".xlsx" || ext == ".xls")
         {
-          if (Options.HeaderIndex >= Options.DataStartIndex)
+          if (Options.HeaderRowStartIndex >= Options.DataStartIndex)
           {
             throw new Exception("The header index cannot be greater than or equal to the data index");
           }
@@ -80,24 +151,85 @@ namespace ExcelReaderLibraryFW
 
     private void ParseHeader<T>(ExcelWorksheet sheet) where T : class, new()
     {
-      //SetReaderIndex(sheet, true);
-      var props = new T().GetType().GetProperties();
+      if (Options.HeaderRowStopIndex != -1)
+      {
+        ParseMultiRowHeader<T>(sheet);
+      }
+      else
+      {
+        ParseSingleRowHeader<T>(sheet);
+      }
+    }
+
+    private void ParseMultiRowHeader<T>(ExcelWorksheet sheet) where T : class, new()
+    {
+      PropertyHeaders.Clear();
+      var props = new Queue<PropertyInfo>(new T().GetType().GetProperties());
       var start = sheet.Columns.StartColumn;
       var end = sheet.Columns.EndColumn;
-      for (int i = start; i < end + 1; i++)
+      while (props.Count > 0)
       {
-        if (sheet.Cells[1, i].Value is string headerName)
+        var prop = props.Dequeue();
+        bool found = false;
+        var excelFields = prop.GetCustomAttributes<ExcelFieldAttribute>();
+        if (excelFields.Count() == 0) continue;
+
+        for (int r = Options.HeaderRowStartIndex; r <= Options.HeaderRowStopIndex; r++)
         {
-          foreach (var prop in props)
+          for (int c = start; c <= end; c++)
           {
+            if (PropertyHeaders.ContainsKey(c)) continue;
+
+            if (sheet.Cells[r, c].Value is string headerName)
+            {
+              if (string.IsNullOrEmpty(headerName)) continue;
+
+              if (excelFields.Any())
+              {
+                if (excelFields.Any(field => field.CheckProperty(headerName, prop.Name, c)))
+                {
+                  if (!PropertyHeaders.ContainsKey(c))
+                  {
+                    PropertyHeaders.Add(c, prop);
+                    found = true;
+                    break;
+                  }
+                }
+              }
+            }
+          }
+
+          if (found) break;
+        }
+      }
+    }
+
+    private void ParseSingleRowHeader<T>(ExcelWorksheet sheet) where T : class, new()
+    {
+      PropertyHeaders.Clear();
+      var props = new Queue<PropertyInfo>(new T().GetType().GetProperties());
+      var start = sheet.Columns.StartColumn;
+      var end = sheet.Columns.EndColumn;
+      while (props.Count != 0)
+      {
+        var prop = props.Dequeue();
+
+        for (int c = start; c < end + 1; c++)
+        {
+          if (PropertyHeaders.ContainsKey(c)) continue;
+
+          if (sheet.Cells[Options.HeaderRowStartIndex, c].Value is string headerName)
+          {
+            if (string.IsNullOrEmpty(headerName)) continue;
+
             var excelFields = prop.GetCustomAttributes<ExcelFieldAttribute>();
             if (excelFields.Any())
             {
-              if (excelFields.Any(field => field.CheckProperty(headerName, prop.Name, Options.FileID)))
+              if (excelFields.Any(field => field.CheckProperty(headerName, prop.Name, c)))
               {
-                if (!PropertyHeaders.ContainsKey(i))
+                if (!PropertyHeaders.ContainsKey(c))
                 {
-                  PropertyHeaders.Add(i, prop);
+                  PropertyHeaders.Add(c, prop);
                   break;
                 }
               }
@@ -198,7 +330,7 @@ namespace ExcelReaderLibraryFW
           prop.SetValue(newObj, Convert.ToByte(value));
         }
       }
-      else if (value is string)
+      else if (value is string v)
       {
         if (prop.PropertyType == typeof(char))
         {
@@ -208,7 +340,7 @@ namespace ExcelReaderLibraryFW
         {
           try
           {
-            prop.SetValue(newObj, Enum.Parse(prop.PropertyType, (string)value, ignoreCase));
+            prop.SetValue(newObj, Enum.Parse(prop.PropertyType, v, ignoreCase));
           }
           catch (Exception)
           {

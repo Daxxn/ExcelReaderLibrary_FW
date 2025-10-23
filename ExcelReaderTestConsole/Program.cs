@@ -14,30 +14,46 @@ namespace ExcelReaderTestConsole
   internal class Program
   {
     static string RawSageLocationsPath = @"C:\Users\Daxxn\Documents\WorkStuff\Cycle Counting\RawLocations_A101_10-17-25.xlsx";
+    static string SageReportPath = @"C:\Users\Daxxn\Documents\WorkStuff\VarianceAnalyzer\DailyReports\Inventory (Stock)_Stock by Site - Site 168 (Archive)_2025-08-25 090507_fe1ea1dc.xlsx";
+    static string SapReportPath = @"C:\Users\Daxxn\Documents\WorkStuff\VarianceAnalyzer\DailyReports\ORWO 09-18-25XLSX.XLSX";
     static string LocationsPath = @"C:\Users\Daxxn\Documents\WorkStuff\Cycle Counting\Locations_A101_10-17-25.xlsx";
     static bool ModernExcel { get; } = false;
     static void Main(string[] args)
     {
       ExcelPackage.License.SetNonCommercialPersonal("Daxxn Lantz");
 
-      string path = LocationsPath;
+      //string path = SageReportPath;
+      string path = SapReportPath;
       Console.WriteLine("Excel Reader Library Testing");
       Console.WriteLine($"Reading Excel File '{Path.GetFileName(path)}'");
 
-      ExcelReaderOptions options = new ExcelReaderOptions()
+      ExcelReaderOptions sageOptions = new ExcelReaderOptions()
       {
-        DataStartIndex = 2,
-        HeaderIndex = 1,
+        HeaderRowStartIndex = 2,
+        HeaderRowStopIndex = 3,
+        DataStartIndex = 6,
         StopCheckColumn = 1,
         WorkbookIndex = 0,
       };
-      ExcelReader reader = new ExcelReader(options);
+      ExcelReaderOptions sapOptions = new ExcelReaderOptions()
+      {
+        HeaderRowStartIndex = 1,
+        DataStartIndex = 2,
+        StopCheckColumn = 1,
+      };
+      //ExcelReader reader = new ExcelReader(sageOptions);
+      ExcelReader reader = new ExcelReader(sapOptions);
 
-      var output = reader.Read<PartModel>(path);
+      //var output = reader.Read<SagePartModel>(path);
+      var output = reader.Read<SapPartModel>(path);
 
       if (output == null)
       {
         Console.WriteLine("Output is null!");
+      }
+      else if (output.Count() == 0)
+      {
+        Console.WriteLine("Output is empty.");
       }
       else
       {
@@ -61,7 +77,7 @@ namespace ExcelReaderTestConsole
         testFile = @"F:\Code\C#\CSharpLibraries\ExcelReaderLibraryFW\ExcelParserTestDoc.xlsx";
         options = new ExcelReaderOptions()
         {
-          FileID = "ModernFile"
+          //FileID = "ModernFile"
         };
 
       }
@@ -70,7 +86,7 @@ namespace ExcelReaderTestConsole
         testFile = @"F:\Code\C#\CSharpLibraries\ExcelReaderLibraryFW\TestOld.xls";
         options = new ExcelReaderOptions()
         {
-          FileID = "OldFile"
+          //FileID = "OldFile"
         };
       }
       ExcelReader reader = new ExcelReader(options);
