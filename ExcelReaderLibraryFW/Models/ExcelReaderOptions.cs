@@ -48,6 +48,11 @@ namespace ExcelReaderLibraryFW.Models
     public int StopCheckColumn { get; set; } = 1;
 
     /// <summary>
+    /// Handle incosistencies and mising headers as errors.
+    /// </summary>
+    public bool Strict { get; set; } = false;
+
+    /// <summary>
     /// Initializes a new instance of the class.
     /// </summary>
     public ExcelReaderOptions() { }

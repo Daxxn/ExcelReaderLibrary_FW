@@ -5,22 +5,25 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ExcelReaderTestConsole
+namespace ExcelReaderTestConsole.TestModels
 {
-  internal class SagePartModel
+  internal class SapPartModel
   {
-    [ExcelField("Groups")]
+    [ExcelField("Material")]
     public string PartNumber { get; set; }
 
     [ExcelField("Description")]
     public string Desc { get; set; }
 
-    [ExcelField("QTY")]
+    [ExcelField("Un-Restricted", 5)]
     public double Stock { get; set; }
+
+    [ExcelField("Price")]
+    public double Price { get; set; }
 
     public override string ToString()
     {
-      return $"{PartNumber} - {Desc,-20} - {Stock}";
+      return $"{PartNumber,-15} - {Desc,60} - {Stock} - {Price:C2}";
     }
   }
 }

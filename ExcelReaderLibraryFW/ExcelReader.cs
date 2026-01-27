@@ -114,7 +114,7 @@ namespace ExcelReaderLibraryFW
       if (File.Exists(filePath))
       {
         var ext = Path.GetExtension(filePath).ToLower();
-        if (ext == ".xlsx" || ext == ".xls")
+        if (ext == ".xlsx")
         {
           if (Options.HeaderRowStartIndex >= Options.DataStartIndex)
           {
@@ -208,11 +208,13 @@ namespace ExcelReaderLibraryFW
     {
       PropertyHeaders.Clear();
       var props = new Queue<PropertyInfo>(new T().GetType().GetProperties());
+      var propCount = props.Count;
       var start = sheet.Columns.StartColumn;
       var end = sheet.Columns.EndColumn;
       while (props.Count != 0)
       {
         var prop = props.Dequeue();
+        var excelFields = prop.GetCustomAttributes<ExcelFieldAttribute>();
 
         for (int c = start; c < end + 1; c++)
         {
@@ -221,8 +223,8 @@ namespace ExcelReaderLibraryFW
           if (sheet.Cells[Options.HeaderRowStartIndex, c].Value is string headerName)
           {
             if (string.IsNullOrEmpty(headerName)) continue;
+            headerName = CleanHeader(headerName);
 
-            var excelFields = prop.GetCustomAttributes<ExcelFieldAttribute>();
             if (excelFields.Any())
             {
               if (excelFields.Any(field => field.CheckProperty(headerName, prop.Name, c)))
@@ -232,10 +234,22 @@ namespace ExcelReaderLibraryFW
                   PropertyHeaders.Add(c, prop);
                   break;
                 }
+                else
+                {
+                  if (Options.Strict)
+                  {
+                    throw new Exception("Duplicate header found in the spreadsheet.");
+                  }
+                }
               }
             }
           }
         }
+      }
+
+      if (Options.Strict && PropertyHeaders.Count < propCount)
+      {
+        throw new Exception("Some headers are missing from the spreadsheet.");
       }
     }
 
@@ -332,6 +346,7 @@ namespace ExcelReaderLibraryFW
       }
       else if (value is string v)
       {
+        v = v.Trim();
         if (prop.PropertyType == typeof(char))
         {
           prop.SetValue(newObj, Convert.ToChar(value));
@@ -342,12 +357,66 @@ namespace ExcelReaderLibraryFW
           {
             prop.SetValue(newObj, Enum.Parse(prop.PropertyType, v, ignoreCase));
           }
-          catch (Exception)
+          catch (Exception e)
           {
-
+            if (Options.Strict)
+            {
+              throw new Exception("Unable to conver enum.", e);
+            }
+          }
+        }
+        else if (prop.PropertyType == typeof(int))
+        {
+          if (int.TryParse(v, out int tempInt))
+          {
+            prop.SetValue(newObj, tempInt);
+          }
+        }
+        else if (prop.PropertyType == typeof(byte))
+        {
+          if (byte.TryParse(v, out byte tempInt))
+          {
+            prop.SetValue(newObj, tempInt);
+          }
+        }
+        else if (prop.PropertyType == typeof(double))
+        {
+          if (double.TryParse(v, out double tempDbl))
+          {
+            prop.SetValue(newObj, tempDbl);
+          }
+        }
+        else if (prop.PropertyType == typeof(float))
+        {
+          if (float.TryParse(v, out float tempFlt))
+          {
+            prop.SetValue(newObj, tempFlt);
+          }
+        }
+        else if (prop.PropertyType == typeof(decimal))
+        {
+          if (decimal.TryParse(v, out decimal tempDec))
+          {
+            prop.SetValue(newObj, tempDec);
+          }
+        }
+        else if (prop.PropertyType == typeof(bool))
+        {
+          if (v == "0" || v.ToLower() == "false")
+          {
+            prop.SetValue(newObj, false);
+          }
+          else if (v == "1" || v.ToLower() == "true")
+          {
+            prop.SetValue(newObj, true);
           }
         }
       }
+    }
+
+    private string CleanHeader(string header)
+    {
+      return header.Trim();
     }
     #endregion
 

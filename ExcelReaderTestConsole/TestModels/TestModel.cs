@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 using ExcelReaderLibraryFW.Models;
 
-namespace ExcelReaderTestConsole
+namespace ExcelReaderTestConsole.TestModels
 {
    public enum TestEnum
    {
