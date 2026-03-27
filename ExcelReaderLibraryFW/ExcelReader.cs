@@ -46,7 +46,8 @@ namespace ExcelReaderLibraryFW
     /// <param name="filePath">The path to the file.</param>
     /// <returns>A tuple containing the read data and any errors.</returns>
     /// <exception cref="Exception"></exception>
-    public (IEnumerable<T>, List<Exception>) ReadVerbose<T>(string filePath) where T : class, new()
+    //public (IEnumerable<T>, List<Exception>) ReadVerbose<T>(string filePath) where T : class, new()
+    public Tuple<IEnumerable<T>, List<Exception>> ReadVerbose<T>(string filePath) where T : class, new()
     {
       if (File.Exists(filePath))
       {
@@ -88,7 +89,7 @@ namespace ExcelReaderLibraryFW
                 errors.Add(e);
               }
             }
-            return (data, errors);
+            return Tuple.Create<IEnumerable<T>, List<Exception>>(data, errors);
           }
         }
         else
