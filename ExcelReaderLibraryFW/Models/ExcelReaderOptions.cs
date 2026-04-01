@@ -53,6 +53,13 @@ namespace ExcelReaderLibraryFW.Models
     public bool Strict { get; set; } = false;
 
     /// <summary>
+    /// When an objects property is a string, convert numbers found in the spreadsheet to strings.
+    /// <para/>
+    /// Otherwise the row will be skipped.
+    /// </summary>
+    public bool ConvertNumbersToString { get; set; } = false;
+
+    /// <summary>
     /// Initializes a new instance of the class.
     /// </summary>
     public ExcelReaderOptions() { }

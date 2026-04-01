@@ -19,13 +19,15 @@ namespace ExcelReaderTestConsole
     static string SapReportPath = @"C:\Users\Daxxn\Documents\WorkStuff\VarianceAnalyzer\DailyReports\ORWO 09-18-25XLSX.XLSX";
     static string LocationsPath = @"C:\Users\Daxxn\Documents\WorkStuff\Cycle Counting\Locations_A101_10-17-25.xlsx";
     static string SagePicklistPath = @"C:\Users\Daxxn\Documents\WorkStuff\Picklists\Picklist Data\Axxx RACK 2542546\2542546 RACK OP -10-.xls";
+    static string SageNewPNReportPath = @"C:\Users\Daxxn\Documents\WorkStuff\VarianceAnalyzer\Tests\TEST - Inventory (Stock)_Stock by Site - Site 168 (Archive)_2026-03-27 090509_7858d895.xlsx";
     static bool ModernExcel { get; } = false;
     static void Main(string[] args)
     {
       ExcelPackage.License.SetNonCommercialPersonal("Daxxn Lantz");
 
       //string path = SageReportPath;
-      string path = SagePicklistPath;
+      //string path = SagePicklistPath;
+      string path = SageNewPNReportPath;
       Console.WriteLine("Excel Reader Library Testing");
       Console.WriteLine($"Reading Excel File '{Path.GetFileName(path)}'");
 
@@ -50,13 +52,13 @@ namespace ExcelReaderTestConsole
         StopCheckColumn = 6,
       };
 
-      //ExcelReader reader = new ExcelReader(sageOptions);
+      ExcelReader reader = new ExcelReader(sageOptions);
       //ExcelReader reader = new ExcelReader(sapOptions);
-      ExcelReader reader = new ExcelReader(picklistOptions);
+      //ExcelReader reader = new ExcelReader(picklistOptions);
 
-      //var output = reader.Read<SagePartModel>(path);
+      var output = reader.Read<SagePartModel>(path);
       //var output = reader.Read<SapPartModel>(path);
-      var output = reader.Read<PicklistSagePartModel>(path);
+      //var output = reader.Read<PicklistSagePartModel>(path);
 
 
       if (output == null)
